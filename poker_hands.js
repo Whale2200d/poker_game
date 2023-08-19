@@ -1,22 +1,14 @@
 const fs = require("fs");
 
-function readCardsFromFile(filePath, i = 0) {
-  try {
-    const data = fs.readFileSync(filePath, "utf8");
-    const lines = data.split("\r\n");
+function readCardsFromFile(lines, i = 0) {
+  const player1Cards = lines[i].slice(0, 14).split(" ");
+  const player2Cards = lines[i].slice(15).split(" ");
 
-    const player1Cards = lines[i].slice(0, 14).split(" ");
-    const player2Cards = lines[i].slice(15).split(" ");
-
-    return [player1Cards, player2Cards];
-  } catch (err) {
-    console.error("파일 읽기 오류:", err);
-    return [[], []];
-  }
+  return [player1Cards, player2Cards];
 }
 
 const CARDS_NUMBER = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-const CARDS_SHAPE = ["S", "D", "H", "C"];
+// const CARDS_SHAPE = ["S", "D", "H", "C"];
 
 function sameValue(playerCards) {
   // Four of a kind 인지
@@ -134,8 +126,6 @@ function isStraight(cards) {
     .map((card) => card.number)
     .sort((a, b) => CARDS_NUMBER.indexOf(a) - CARDS_NUMBER.indexOf(b));
 
-  // console.log("sortedNumbers: ", sortedNumbers);
-
   for (let i = 0; i < sortedNumbers.length - 1; i++) {
     if (
       CARDS_NUMBER.indexOf(sortedNumbers[i + 1]) -
@@ -234,7 +224,7 @@ function sortedCardsNumber(cards) {
   return sortedNumbers;
 }
 
-function findThreeOfAKind(cards) {
+function findThreeOfAKindOrFourOfAKind(cards, pair) {
   const numberCounts = {};
 
   // 카드 숫자 세기
@@ -245,7 +235,7 @@ function findThreeOfAKind(cards) {
 
   // Three of a kind 인지 확인하기
   for (const number in numberCounts) {
-    if (numberCounts[number] === 3) {
+    if (numberCounts[number] === pair) {
       return numberCounts;
     }
   }
@@ -269,7 +259,7 @@ function findOnePairOrTwoPair(cards, pair) {
     }
   }
 
-  console.log("numberCounts: ", numberCounts); // 왜 순서대로 잘 들어가는지?
+  // console.log("numberCounts: ", numberCounts); // 왜 순서대로 잘 들어가는지?
   if (pairCount === pair) return numberCounts;
 }
 
@@ -277,34 +267,22 @@ function whoisHighCard(player1Cards, player2Cards) {
   let highestNumber1 = sortedCardsNumber(player1Cards)[0];
   let highestNumber2 = sortedCardsNumber(player2Cards)[0];
 
-  console.log("highestNumber1: ", highestNumber1);
-  console.log("highestNumber2: ", highestNumber2);
-
   if (highestNumber1 > highestNumber2) return "Player 1";
   if (highestNumber1 < highestNumber2) return "Player 2";
 }
 
 function deletePairsHandArray(playerCards, keyArray) {
   let playerDeletePairsHandArray = [...playerCards];
-  console.log("playerCards: ", playerCards);
-  console.log("keyArray: ", keyArray);
-
   for (let i = 0; i < keyArray.length; i++) {
     for (let j = 0; j < playerCards.length; j++) {
       if (playerCards[j].number === Number(keyArray[i]))
-        playerDeletePairsHandArray.splice(playerCards[j], 1);
+        playerDeletePairsHandArray.splice(j, 1);
     }
   }
-
-  console.log("playerDeletePairsHandArray: ", playerDeletePairsHandArray);
   return playerDeletePairsHandArray;
 }
 
 function getKeyByValue(object, value) {
-  console.log(
-    "getKeyByValue: ",
-    Object.keys(object).filter((key) => object[key] === value)
-  );
   return Object.keys(object).filter((key) => object[key] === value);
 }
 
@@ -313,62 +291,103 @@ function determineWinner(player1Cards, player2Cards) {
   let cardRanking1 = whatIsMyCardRanking(player1Cards);
   let cardRanking2 = whatIsMyCardRanking(player2Cards);
 
-  console.log(cardRanking1);
-  console.log(cardRanking2);
+  // console.log("cardRanking1: ", cardRanking1);
+  // console.log("cardRanking2: ", cardRanking2);
 
   if (cardRanking1 > cardRanking2) return "Player 1";
   if (cardRanking1 < cardRanking2) return "Player 2";
   if (cardRanking1 === cardRanking2) {
-    // // Royal Straight Flush
-    // if (cardRanking1 === 10) return "";
+    // Royal Straight Flush
+    if (cardRanking1 === 10) {
+      return "who is winner?";
+    }
 
-    // // Straight Flush
-    // if (cardRanking1 === 9)
+    // Straight Flush
+    if (cardRanking1 === 9) {
+      let sortedPlayer1CardsArray = sortedCardsNumber(player1Cards);
+      let sortedPlayer2CardsArray = sortedCardsNumber(player2Cards);
 
-    // // Four of a kind
-    // if (cardRanking1 === 8)
+      for (let i = 0; i < sortedPlayer1CardsArray.length; i++) {
+        if (sortedPlayer1CardsArray[i] > sortedPlayer2CardsArray[i]) {
+          return "Player 1";
+        } else if (sortedPlayer1CardsArray[i] < sortedPlayer2CardsArray[i]) {
+          return "Player 2";
+        }
+      }
 
-    // // Full House
-    // if (cardRanking1 === 7)
+      return "who is winner?";
+    }
 
-    // // Flush
-    // if (cardRanking1 === 6)
+    // Four of a kind
+    if (cardRanking1 === 8) {
+      let player1FourOfAKind = findThreeOfAKindOrFourOfAKind(player1Cards, 4);
+      let player2FourOfAKind = findThreeOfAKindOrFourOfAKind(player2Cards, 4);
 
-    // Straight
-    // if (cardRanking1 === 5) {}
-
-    // Three of a kind
-    if (cardRanking1 === 4) {
-      let player1ThreeOfAKind = findThreeOfAKind(player1Cards);
-      let player2ThreeOfAKind = findThreeOfAKind(player2Cards);
-      console.log("player1ThreeOfAKind: ", player1ThreeOfAKind);
-      console.log("player2ThreeOfAKind: ", player2ThreeOfAKind);
-
-      let keyArray1 = getKeyByValue(player1ThreeOfAKind, 3);
-      let keyArray2 = getKeyByValue(player2ThreeOfAKind, 3);
-      console.log("keyArray1: ", keyArray1);
-      console.log("keyArray2: ", keyArray2);
+      let keyArray1 = getKeyByValue(player1FourOfAKind, 4);
+      let keyArray2 = getKeyByValue(player2FourOfAKind, 4);
 
       // Three of a Kind 카드의 값을 비교하여 높은 값을 가진 자로 승자 도출
       if (Number(keyArray1[0]) > Number(keyArray2[0])) return "Player 1";
       if (Number(keyArray1[0]) < Number(keyArray2[0])) return "Player 2";
-      if (Number(keyArray1[0]) === Number(keyArray2[0])) {
-        // One Pair 카드를 제외하고,
-        let deletedOnPairHandArray1 = deletePairsHandArray(
-          player1Cards,
-          keyArray1
-        );
-        let deletedOnPairHandArray2 = deletePairsHandArray(
-          player2Cards,
-          keyArray1
-        );
+    }
 
-        console.log("deletedOnPairHandArray1: ", deletedOnPairHandArray1);
-        console.log("deletedOnPairHandArray2: ", deletedOnPairHandArray2);
+    // Full House
+    if (cardRanking1 === 7) {
+      let player1ThreeOfAKind = findThreeOfAKindOrFourOfAKind(player1Cards, 3);
+      let player2ThreeOfAKind = findThreeOfAKindOrFourOfAKind(player2Cards, 3);
 
-        // One Pair 카드를 제외한 나머지 카드 배열에서 가장 높은 값이 무엇인지 비교
-        return whoisHighCard(deletedOnPairHandArray1, deletedOnPairHandArray2);
+      let keyArray1 = getKeyByValue(player1ThreeOfAKind, 3);
+      let keyArray2 = getKeyByValue(player2ThreeOfAKind, 3);
+
+      // Three of a Kind 카드의 값을 비교하여 높은 값을 가진 자로 승자 도출
+      if (Number(keyArray1[0]) > Number(keyArray2[0])) return "Player 1";
+      if (Number(keyArray1[0]) < Number(keyArray2[0])) return "Player 2";
+    }
+
+    // Flush
+    if (cardRanking1 === 6) {
+      let sortedPlayer1CardsArray = sortedCardsNumber(player1Cards);
+      let sortedPlayer2CardsArray = sortedCardsNumber(player2Cards);
+
+      for (let i = 0; i < sortedPlayer1CardsArray.length; i++) {
+        if (sortedPlayer1CardsArray[i] > sortedPlayer2CardsArray[i]) {
+          return "Player 1";
+        } else if (sortedPlayer1CardsArray[i] < sortedPlayer2CardsArray[i]) {
+          return "Player 2";
+        }
       }
+
+      return "who is winner?";
+    }
+
+    // Straight
+    if (cardRanking1 === 5) {
+      let sortedPlayer1CardsArray = sortedCardsNumber(player1Cards);
+      let sortedPlayer2CardsArray = sortedCardsNumber(player2Cards);
+
+      for (let i = 0; i < sortedPlayer1CardsArray.length; i++) {
+        if (sortedPlayer1CardsArray[i] > sortedPlayer2CardsArray[i]) {
+          return "Player 1";
+        } else if (sortedPlayer1CardsArray[i] < sortedPlayer2CardsArray[i]) {
+          return "Player 2";
+        }
+      }
+
+      return "who is winner?";
+    }
+
+    // Three of a kind
+    if (cardRanking1 === 4) {
+      let player1ThreeOfAKind = findThreeOfAKindOrFourOfAKind(player1Cards, 3);
+      let player2ThreeOfAKind = findThreeOfAKindOrFourOfAKind(player2Cards, 3);
+
+      let keyArray1 = getKeyByValue(player1ThreeOfAKind, 3);
+      let keyArray2 = getKeyByValue(player2ThreeOfAKind, 3);
+
+      // Three of a Kind 카드의 값을 비교하여 높은 값을 가진 자로 승자 도출
+      // 같은 카드가 4장이므로 Three of a kind 이후 값은 비교할 일 없음
+      if (Number(keyArray1[0]) > Number(keyArray2[0])) return "Player 1";
+      if (Number(keyArray1[0]) < Number(keyArray2[0])) return "Player 2";
     }
 
     // Two Pairs
@@ -396,9 +415,6 @@ function determineWinner(player1Cards, player2Cards) {
             keyArray1
           );
 
-          console.log("deletedOnPairHandArray1: ", deletedOnPairHandArray1);
-          console.log("deletedOnPairHandArray2: ", deletedOnPairHandArray2);
-
           // One Pair 카드를 제외한 나머지 카드 배열에서 가장 높은 값이 무엇인지 비교
           return whoisHighCard(
             deletedOnPairHandArray1,
@@ -412,11 +428,13 @@ function determineWinner(player1Cards, player2Cards) {
     if (cardRanking1 === 2) {
       let player1OnePairHand = findOnePairOrTwoPair(player1Cards, 1);
       let player2OnePairHand = findOnePairOrTwoPair(player2Cards, 1);
+      // console.log("player1OnePairHand: ", player1OnePairHand);
+      // console.log("player2OnePairHand: ", player2OnePairHand);
 
       let keyArray1 = getKeyByValue(player1OnePairHand, 2);
       let keyArray2 = getKeyByValue(player2OnePairHand, 2);
-
-      console.log("keyArray1: ", keyArray1);
+      // console.log("keyArray1: ", keyArray1);
+      // console.log("keyArray2: ", keyArray2);
 
       // One Pair 카드의 값을 비교하여 높은 값을 가진 자로 승자 도출
       if (Number(keyArray1[0]) > Number(keyArray2[0])) return "Player 1";
@@ -432,6 +450,8 @@ function determineWinner(player1Cards, player2Cards) {
           player2Cards,
           keyArray1
         );
+        // console.log("deletedOnPairHandArray1: ", deletedOnPairHandArray1);
+        // console.log("deletedOnPairHandArray2: ", deletedOnPairHandArray2);
 
         // One Pair 카드를 제외한 나머지 카드 배열에서 가장 높은 값이 무엇인지 비교
         return whoisHighCard(deletedOnPairHandArray1, deletedOnPairHandArray2);
@@ -470,31 +490,40 @@ function makeSeperatedCardHandArray(playerCards) {
 }
 
 function playPokerGame() {
-  const filePath = "poker2.txt";
-  const [player1Cards, player2Cards] = readCardsFromFile(filePath);
-
-  const seperatedCardHandArray1 = makeSeperatedCardHandArray(player1Cards);
-  const seperatedCardHandArray2 = makeSeperatedCardHandArray(player2Cards);
-  console.log("seperatedCardHandArray1: ", seperatedCardHandArray1);
-  console.log("seperatedCardHandArray2: ", seperatedCardHandArray2);
-
+  const filePath = "poker.txt";
   let player1Wins = 0;
   let player2Wins = 0;
 
-  const winner = determineWinner(
-    seperatedCardHandArray1,
-    seperatedCardHandArray2
-  );
-  if (winner === "Player 1") {
-    player1Wins++;
-  } else if (winner === "Player 2") {
-    player2Wins++;
-  } else {
-    console.log("Who is winner?");
+  try {
+    const data = fs.readFileSync(filePath, "utf8");
+    const lines = data.split("\r\n");
+    console.log(lines.length);
+    for (let i = 0; i < lines.length; i++) {
+      const [player1Cards, player2Cards] = readCardsFromFile(lines, i);
+
+      const seperatedCardHandArray1 = makeSeperatedCardHandArray(player1Cards);
+      const seperatedCardHandArray2 = makeSeperatedCardHandArray(player2Cards);
+
+      const winner = determineWinner(
+        seperatedCardHandArray1,
+        seperatedCardHandArray2
+      );
+      if (winner === "Player 1") {
+        player1Wins++;
+      } else if (winner === "Player 2") {
+        player2Wins++;
+      } else {
+        console.log("Who is winner?");
+        break;
+      }
+    }
+  } catch (err) {
+    console.error("파일 읽기 오류:", err);
+    return [[], []];
   }
 
   console.log(`Player 1의 이긴 횟수: ${player1Wins}`);
-  console.log(`Player 2의 이긴 횟수: ${player2Wins}`);
+  // console.log(`Player 2의 이긴 횟수: ${player2Wins}`);
 }
 
 playPokerGame();
